@@ -28,9 +28,9 @@ def seedBeadsN(pts, sizeI, sigma):
     # subset intensity will be joined/added in the original image
     idx , mask = [[None for _ in range(nPts)] for _ in range(nDims)], [0]*nDims
     for i in range(nDims):
-        temp = (np.expand_dims(np.floor(pts[:,i]), axis=1) + 
-                    np.matlib.repmat(np.arange(bead_size[i]), nPts, 1) -
-                    bead_size[i]/2)
+        temp = (np.expand_dims(np.floor(pts[:,i]), axis=1)
+                + np.matlib.repmat(np.arange(bead_size[i]), nPts, 1)
+                - bead_size[i]/2)
         mask[i] = np.logical_and(temp >=0, temp<sizeI[i])
         for j in range(temp.shape[0]):
             idx[i][j] = temp[j,:].astype(int)
@@ -62,8 +62,8 @@ def seedBeadsN(pts, sizeI, sigma):
         
             I[idx[0][i][0]:idx[0][i][-1]+1, 
               idx[1][i][0]:idx[1][i][-1]+1] = (I[idx[0][i][0]:idx[0][i][-1]+1, 
-                                                idx[1][i][0]:idx[1][i][-1]+1] + 
-                                                f[i])
+                                                idx[1][i][0]:idx[1][i][-1]+1] 
+                                                + f[i])
     elif nDims == 3:        
         for i in range(nPts):
             
@@ -71,20 +71,26 @@ def seedBeadsN(pts, sizeI, sigma):
               idx[1][i][0]:idx[1][i][-1]+1,
               idx[2][i][0]:idx[2][i][-1]+1] = (I[idx[0][i][0]:idx[0][i][-1]+1, 
                                                 idx[1][i][0]:idx[1][i][-1]+1,
-                                                idx[2][i][0]:idx[2][i][-1]+1] + 
-                                                f[i])        
+                                                idx[2][i][0]:idx[2][i][-1]+1] 
+                                                + f[i])        
 
     I[I > 1] = 1
     return I
+
 
 def random_seed_locations(nPts, sizeI):
     return np.random.random((nPts, len(sizeI)))*sizeI
 
 
-sigma = np.array([1, 1])
-sizeI = np.array([64, 64])
-pts = random_seed_locations(100, sizeI)
+def add_poisson_noise(I, SNR=10):
+    return np.random.poisson(I*(SNR**2))/(SNR**2)
 
-I = seedBeadsN(pts, sizeI, sigma)
-plt.imshow(I)
-plt.show()
+
+def add_gaussian_noise(I, mean=0, sigma=0.1):
+    return I + np.random.normal(mean, sigma, size=I.shape)
+
+
+def change_im_range(I, lower=0.2, upper=0.8):
+    return (I - lower)*(upper-lower) + lower
+
+
