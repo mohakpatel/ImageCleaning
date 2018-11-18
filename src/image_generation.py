@@ -100,47 +100,67 @@ def change_im_range(I, lower=0.2, upper=0.8):
     return (I - lower)*(upper-lower) + lower
 
 
-def create_im(n_images, sizeI, psf, sigma_pts, snr, gauss_noise, im_range):
+def create_im_2D(n_images, sizeI, slices, sigma_pts, psf=None, snr=None, 
+            im_range=None, gauss_noise=None):
     '''
     Create bead images for training or testing
 
     '''
-    n_slices = [x for x in range(10)]
+    n_slices = len(slices)
     imgs = np.zeros((n_images, sizeI[0], sizeI[1]))
     imgs_noise = np.zeros((n_images, sizeI[0], sizeI[1]))
-    for i in range(n_images/n_slices):
-        for sigma, nPts in sigma_pts.items():
+
+    
+    for i in range(n_images//n_slices):
+        img = np.zeros(sizeI)
+        for nPts, sigma in sigma_pts.items():
 
             # Random number of points and corresponding sigma
             nPts = np.round(np.random.poisson(nPts))
             pts = random_seed_locations(nPts, sizeI)
-            sigma = (sigma + np.random.normal(0, 0.2*sigma, size=sigma.shape))
+            sigma = (sigma + np.random.normal(0, 0.2*sigma[0], 
+                             size=(nPts,1))*sigma)
             
             # Create image with random particle info
             img = np.maximum(seedBeadsN(pts, sizeI, sigma), img)
 
         # Save true images
-        imgs[i*n_slices:(i+1)*n_slices,:,:] = img[n_slices,:,:]
+        imgs[i*n_slices:(i+1)*n_slices,:,:] = np.swapaxes(img[:,:,slices],0,2)
         
         # Convole img with a psf
-        img = ndimage.convolve(img, psf, mode='constant', cval=0.0)
-        imgs_noise[i*n_slices:(i+1)*n_slices,:,:] = imgs_noise[n_slices,:,:]
+        if np.any(psf):
+            img = ndimage.convolve(img, psf, mode='constant', cval=0.0)
+            imgs_noise[i*n_slices:(i+1)*n_slices,:,:] = np.swapaxes(
+                                                        img[:,:,slices],0,2)
+        else:
+            imgs_noise[i*n_slices:(i+1)*n_slices,:,:] = np.swapaxes(
+                                                        img[:,:,slices],0,2)
 
-    for i in range(n_images):
-        # Change image intensity distribution
-        middle = np.random.random()
-        lower = np.random.random()*middle
-        upper = np.random.random()*(1-middle) + middle
-        imgs_noise[i,:,:] = change_im_range(imgs[i,:,:], lower, upper)
+    if im_range:
+        for i in range(n_images):
+            # Change image intensity distribution
+            lower = np.random.random()*im_range['lower']
+            upper = np.random.random()*im_range['upper'] + im_range['gap']
+            imgs_noise[i,:,:] = change_im_range(imgs[i,:,:], lower, upper)
 
 
     
     imgs = np.expand_dims(imgs, axis=3)
     imgs_noise = np.expand_dims(imgs_noise, axis=3)
 
+    if snr:
+        imgs_noise = add_poisson_noise(imgs_noise, snr)
 
-    imgs_noise = add_poisson_noise(imgs, snr)
-    imgs_noise = add_gaussian_noise(imgs_noise, 
+    if gauss_noise:
+        imgs_noise = add_gaussian_noise(imgs_noise, 
                                     gauss_noise['mean'], gauss_noise['std'])
 
-    return imgs_noise, imgs
+    imgs[imgs>1] = 1
+    imgs_noise[imgs_noise>1] = 1
+
+    return imgs, imgs_noise
+
+# nslices = [0,30,40,60]
+# sizei = np.array([64,64,64])
+# sigmapts = {500:np.array([1,1,1]), 100:2*np.array([1,1,1]), 50:3*np.array([1,1,1])}
+# _, I = create_im_2D(10, sizei, nslices, sigmapts)
