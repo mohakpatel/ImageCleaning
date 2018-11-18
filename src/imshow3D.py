@@ -19,15 +19,16 @@ class imshow3D:
     
     """
     
-    def __init__(self, volume, figsize=(8,8), cmap='plasma'):
+    def __init__(self, volume, zaxis=2, figsize=(8,8), cmap='plasma'):
         self.volume = volume
         self.figsize = figsize
         self.cmap = cmap
+        self.view = ['y-z', 'z-x', 'x-y'][zaxis]
         self.v = [np.min(volume), np.max(volume)]
         
         # Call to select slice plane
         ipyw.interact(self.view_selection, view=ipyw.RadioButtons(
-            options=['x-y','y-z', 'z-x'], value='x-y', 
+            options=['x-y','y-z', 'z-x'], value=self.view, 
             description='Slice plane selection:', disabled=False,
             style={'description_width': 'initial'}))
     
