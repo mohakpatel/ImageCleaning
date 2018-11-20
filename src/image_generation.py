@@ -25,6 +25,10 @@ def seedBeadsN(pts, sizeI, sigma):
     relative_pts = (pts - np.floor(pts)) + bead_size/2
     f = [0]*nPts
     for i in range(nPts):
+        # rot = np.random.random()*2*np.pi
+        # m[0], m[1] = (np.cos(rot)*m[0] + np.sin(rot)*m[1], 
+        #             -np.sin(rot)*m[0] + np.cos(rot)*m[1])
+
         for j in range(nDims):
             f[i] = f[i] - ((m[j] - relative_pts[i,j]) / (2*sigma[i,j]))**2
         f[i] = np.exp(f[i])
@@ -118,9 +122,11 @@ def create_im_2D(n_images, sizeI, slices, sigma_pts, psf=None, snr=None,
             # Random number of points and corresponding sigma
             nPts = np.round(np.random.poisson(nPts))
             pts = random_seed_locations(nPts, sizeI)
+            # sigma = (sigma + np.random.normal(0, 0.2*sigma[0], 
+            #                  size=(nPts,1))*sigma)
             sigma = (sigma + np.random.normal(0, 0.2*sigma[0], 
-                             size=(nPts,1))*sigma)
-            
+                                size=(nPts,3)))
+            sigma[sigma<0] = 0.1
             # Create image with random particle info
             img = np.maximum(seedBeadsN(pts, sizeI, sigma), img)
 
