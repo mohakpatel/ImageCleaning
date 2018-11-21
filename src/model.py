@@ -12,17 +12,24 @@ import numpy as np
 class ImageCleaner(object):
     def __init__(self):
         
+        self.dropout = 0.2
         self.lr = 0.001
-               
+        self.is_training = False
+        
+        tf.reset_default_graph()
         self.build()
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
+        
+        
+        self.val_acc = []
+        self.val_loss = []
 
     def build(self):
         
         # Input placeholders
-        self.input_img = tf.placeholder(tf.float32, (None,64,64,1), name="input")
-        self.target_img = tf.placeholder(tf.float32, (None,64,64,1), name="input")
+        self.input_img = tf.placeholder(tf.float32, (None,64,64,1))
+        self.target_img = tf.placeholder(tf.float32, (None,64,64,1))
 
         # Layer 1: Conv to 32x32x15
         conv1 = tf.layers.conv2d(inputs=self.input_img, 
@@ -31,9 +38,14 @@ class ImageCleaner(object):
                              strides=(2,2),
                              padding='same',
                              activation=tf.nn.relu)
+
+        # Dropout layer
+        drop1 = tf.layers.dropout(inputs=conv1,
+                            rate=self.dropout,
+                            training=self.is_training)
         
         # Layer 2: Conv to 16x16x30
-        conv2 = tf.layers.conv2d(inputs=conv1, 
+        conv2 = tf.layers.conv2d(inputs=drop1, 
                              filters=30, 
                              kernel_size=(5,5),
                              strides=(2,2),
@@ -51,7 +63,7 @@ class ImageCleaner(object):
         # Layer 4: Conv_transpose to 16x16x45
         conv_t4 = tf.layers.conv2d_transpose(inputs=conv3, 
                                             filters=45, 
-                                            kernel_size=(3,3),
+                                            kernel_size=(5,5),
                                             strides=(2,2),
                                             padding='same',
                                             activation=tf.nn.relu)
@@ -108,11 +120,12 @@ class ImageCleaner(object):
         self.accuracy = tf.reduce_mean(img_diff)
 
 
-    def evaluate(self, x=None, y=None, batch_size=20):
+    def evaluate(self, x=None, y=None, batch_size=20, save_results=False):
         '''
         Evaluate a model
         '''
         total_loss, total_accuracy = 0, 0
+        self.is_training = False
         for i in range(x.shape[0]//batch_size):
 
             x_batch = x[i*batch_size:(i+1)*batch_size,:,:,:]
@@ -127,8 +140,12 @@ class ImageCleaner(object):
 
         mean_loss = total_loss/(i+1)
         mean_acc = total_accuracy/(i+1)
-        print('Validation loss: {:.3f} - Validation accuracy: {:.3f}'.format(
+        print('Validation loss: {:.4f} - Validation accuracy: {:.4f}'.format(
                                                         mean_loss, mean_acc))
+        
+        if save_results:
+            self.val_loss.append(mean_loss)
+            self.val_acc.append(mean_acc)
 
 
 
@@ -145,6 +162,14 @@ class ImageCleaner(object):
                 os.makedirs(os.path.dirname(save_path))
             saver = tf.train.Saver()
 
+        # Initialize to store training parameters
+        self.train_epoch = []
+        self.train_loss = []
+        self.train_acc = []
+        if np.any(val_x):
+            self.val_loss = []
+            self.val_acc = []
+
 
         for e in range(initial_epoch, epochs+initial_epoch):
             
@@ -153,8 +178,11 @@ class ImageCleaner(object):
             if shuffle:
                 x, y = sklearn.utils.shuffle(x, y)
             
-            print('Epoch {:}/{:}'.format(e, epochs+initial_epoch))
+            print('Epoch {:}/{:}'.format(e+1, epochs+initial_epoch))
             progbar = tf.keras.utils.Progbar(x.shape[0], verbose=verbose)
+
+            total_loss, total_acc = 0, 0
+            self.is_training = True
             
             for i in range(x.shape[0]//batch_size):
                 
@@ -167,12 +195,18 @@ class ImageCleaner(object):
 
                 progbar.add(x_batch.shape[0], values=[("Loss", l), 
                                             ("Accuracy", acc)])
+                
+                total_loss += l
+                total_acc += acc
             
+            self.train_epoch.append(e+1)
+            self.train_loss.append(total_loss/(i+1))
+            self.train_acc.append(total_acc/(i+1))
 
             # Perform Validation
             if np.any(val_x):
                 self.evaluate(x=val_x, y=val_y, 
-                            batch_size=batch_size)
+                            batch_size=batch_size, save_results=True)
             if save_path:
                 saver.save(self.sess, save_path,  global_step=e)
             # print('Time elapsed in current iteration: {:.2f} seconds'.format(
@@ -182,7 +216,8 @@ class ImageCleaner(object):
         '''
         Predict a model
         '''
-
+        self.is_training = False
+        y = np.zeros(x.shape)
         for i in range(x.shape[0]//batch_size):
 
             x_batch = x[i*batch_size:(i+1)*batch_size,:,:,:]
@@ -190,25 +225,20 @@ class ImageCleaner(object):
             predicted_img = self.sess.run([self.decoded_img], 
                                 feed_dict={self.input_img:x_batch})
 
-            x[i*batch_size:(i+1)*batch_size,:,:,:] = predicted_img
+            y[i*batch_size:(i+1)*batch_size,:,:,:] = np.asarray(predicted_img[0])
     
-        return x
+        return y
 
 
-    def save(self, save_path='./checkpoints/my_model.ckpt'):
-
+    def save(self, save_path='./final_model/my_model.ckpt'):
+        
         saver = tf.train.Saver()
         saver.save(self.sess, save_path)
         print("Model saved in path: %s" % save_path)
 
     
-    def restore(self, model_path='./checkpoints/my_model.ckpt'):
+    def restore(self, save_path='./final_model/my_model.ckpt'):
         
         saver = tf.train.Saver()
-        saver.restore(self.sess, model_path)
+        saver.restore(self.sess, save_path)
         print("Model restored.")
-
-
-# if __name__ == '__main__':
-#     model = ImageCleaner()
-#     # model.train(n_epochs=15)

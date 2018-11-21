@@ -164,7 +164,7 @@ def create_im_2D(n_images, sizeI, slices, sigma_pts, psf=None, snr=None,
     imgs[imgs>1] = 1
     imgs_noise[imgs_noise>1] = 1
 
-    return imgs, imgs_noise
+    return imgs_noise, imgs
 
 # nslices = [0,30,40,60]
 # sizei = np.array([64,64,64])
