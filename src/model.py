@@ -22,7 +22,7 @@ class ImageCleaner(object):
         self.sess.run(tf.global_variables_initializer())
         
         
-        self.val_acc = []
+        self.val_error = []
         self.val_loss = []
 
     def build(self):
@@ -114,38 +114,38 @@ class ImageCleaner(object):
         self.loss = tf.reduce_mean(entropy)
         self.opt = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
 
-        # Accuracy (average image intensity difference)
+        # Error(average image intensity difference)
         img_diff = tf.math.sqrt(tf.math.square(self.decoded_img
                                                 - self.target_img))
-        self.accuracy = tf.reduce_mean(img_diff)
+        self.error = tf.reduce_mean(img_diff)
 
 
     def evaluate(self, x=None, y=None, batch_size=20, save_results=False):
         '''
         Evaluate a model
         '''
-        total_loss, total_accuracy = 0, 0
+        total_loss, total_error = 0, 0
         self.is_training = False
         for i in range(x.shape[0]//batch_size):
 
             x_batch = x[i*batch_size:(i+1)*batch_size,:,:,:]
             y_batch = y[i*batch_size:(i+1)*batch_size,:,:,:]
 
-            l, acc = self.sess.run([self.loss, self.accuracy], 
+            l, error = self.sess.run([self.loss, self.error], 
                                 feed_dict={self.input_img:x_batch,
                                         self.target_img:y_batch})
 
             total_loss += l
-            total_accuracy += acc
+            total_error += error
 
         mean_loss = total_loss/(i+1)
-        mean_acc = total_accuracy/(i+1)
-        print('Validation loss: {:.4f} - Validation accuracy: {:.4f}'.format(
-                                                        mean_loss, mean_acc))
+        mean_error = total_error/(i+1)
+        print('Validation loss: {:.4f} - Validation Error: {:.4f}'.format(
+                                                        mean_loss, mean_error))
         
         if save_results:
             self.val_loss.append(mean_loss)
-            self.val_acc.append(mean_acc)
+            self.val_error.append(mean_error)
 
 
 
@@ -165,10 +165,10 @@ class ImageCleaner(object):
         # Initialize to store training parameters
         self.train_epoch = []
         self.train_loss = []
-        self.train_acc = []
+        self.train_error = []
         if np.any(val_x):
             self.val_loss = []
-            self.val_acc = []
+            self.val_error = []
 
 
         for e in range(initial_epoch, epochs+initial_epoch):
@@ -181,7 +181,7 @@ class ImageCleaner(object):
             print('Epoch {:}/{:}'.format(e+1, epochs+initial_epoch))
             progbar = tf.keras.utils.Progbar(x.shape[0], verbose=verbose)
 
-            total_loss, total_acc = 0, 0
+            total_loss, total_error = 0, 0
             self.is_training = True
             
             for i in range(x.shape[0]//batch_size):
@@ -189,19 +189,19 @@ class ImageCleaner(object):
                 x_batch = x[i*batch_size:(i+1)*batch_size,:,:,:]
                 y_batch = y[i*batch_size:(i+1)*batch_size,:,:,:]
 
-                l, _, acc = self.sess.run([self.loss, self.opt, self.accuracy], 
+                l, _, error = self.sess.run([self.loss, self.opt, self.error], 
                                     feed_dict={self.input_img:x_batch,
                                                 self.target_img:y_batch})
 
                 progbar.add(x_batch.shape[0], values=[("Loss", l), 
-                                            ("Accuracy", acc)])
+                                            ("Error", error)])
                 
                 total_loss += l
-                total_acc += acc
+                total_error += error
             
             self.train_epoch.append(e+1)
             self.train_loss.append(total_loss/(i+1))
-            self.train_acc.append(total_acc/(i+1))
+            self.train_error.append(total_error/(i+1))
 
             # Perform Validation
             if np.any(val_x):
