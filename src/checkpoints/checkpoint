@@ -1,0 +1,6 @@
+model_checkpoint_path: "mymodel-199"
+all_model_checkpoint_paths: "mymodel-195"
+all_model_checkpoint_paths: "mymodel-196"
+all_model_checkpoint_paths: "mymodel-197"
+all_model_checkpoint_paths: "mymodel-198"
+all_model_checkpoint_paths: "mymodel-199"
