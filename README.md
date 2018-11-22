@@ -5,8 +5,7 @@ In this project I aimed at cleaning noisy microscope images.
 
 My motivation behind this project is that I write image processing algorithms to extract meaningful quantitative data out of micoscope images. However, writing robust algorithms which work in presense of noise is often challenging. My task becomes easier if I don't have the optical distortions and noise in the images. 
 
-Even for people not performing quantiative analysis with images, getting clean images can be benefical. Small features can be observed in images.
- if we can performe deconvolution and noise removal. While there are many algorithms for deconvolution, performing deconvolution in presence of noise is very challenging. 
+Even for people not performing quantiative analysis with images, getting clean images can be benefical. Small features can be observed in images, if can deconvolve and remove noise from the images. While there are many algorithms for deconvolution, performing deconvolution in presence of noise is challenging. 
 
 In this project, I use convolutional auto-encoders to performe image deconvolution and remove noise from the images at the same time. To train the model, I synthetically generate my training images based on the optical properties of an microscope. 
 
