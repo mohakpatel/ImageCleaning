@@ -1,8 +1,6 @@
 """ 
-Model for microscope images cleaning. 
+Convolutional auto-encoder model to clean microscope images. 
 """
-# import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import time 
 import tensorflow as tf
 import os
@@ -21,12 +19,14 @@ class ImageCleaner(object):
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
         
-        
         self.val_error = []
         self.val_loss = []
 
     def build(self):
-        
+        '''
+        Build tensorflow computation graph
+        '''
+
         # Input placeholders
         self.input_img = tf.placeholder(tf.float32, (None,64,64,1))
         self.target_img = tf.placeholder(tf.float32, (None,64,64,1))
@@ -153,7 +153,7 @@ class ImageCleaner(object):
             shuffle=True, val_x=None, val_y=None, initial_epoch=0, 
             save_path=None):
         '''
-        The train function based on Keras api
+        The train function with api similar to Keras
         '''
         
         # Make dir for checkpoints if doesn't exist
@@ -185,6 +185,7 @@ class ImageCleaner(object):
             self.is_training = True
             
             for i in range(x.shape[0]//batch_size):
+                
                 
                 x_batch = x[i*batch_size:(i+1)*batch_size,:,:,:]
                 y_batch = y[i*batch_size:(i+1)*batch_size,:,:,:]
